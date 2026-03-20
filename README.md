@@ -196,38 +196,49 @@ A ZDI score of 25 or above triggers the payout chain. Below 25, the event is
 logged but no payout fires.
 
 ```
-ZDI 25–50   →  40% of declared daily income
-ZDI 50–75   →  70% of declared daily income
-ZDI 75–100  →  100% of declared daily income
+ZDI 25–50   →  40% of the insured amount (CoverageRatio × DailyIncome)
+ZDI 50–75   →  70% of the insured amount (CoverageRatio × DailyIncome)
+ZDI 75–100  →  100% of the insured amount (CoverageRatio × DailyIncome)
 ```
+
+Where `CoverageRatio = 0.30` — meaning 30% of the worker's declared daily
+income is the insured base. Payout percentages apply to this insured base,
+not to the full declared income.
 
 ### Prorated Payout Formula
 
 ```
 EventPayout =
-    DailyIncome
-  × CoverageRatio
-  × PayoutRate         (from ladder above)
+    DailyIncome        -- worker's declared income tier (Rs. 400 / 600 / 800)
+  × CoverageRatio      -- fraction of income insured, fixed at 0.30
+  × PayoutRate         -- payout % from the ZDI ladder above (0.40 / 0.70 / 1.00)
   × (AffectedHours / WorkingHours)
+                       -- fraction of shift affected; WorkingHours = 10 (Bengaluru standard)
+                       -- AffectedHours = duration ZDI remained at or above trigger threshold
 ```
 
-Where `AffectedHours` is the duration the ZDI remained above threshold, and
-`WorkingHours` is standardised at 10 hours for Bengaluru Q-commerce.
+**Example:** A Rs. 600/day worker in a ZDI 60 event lasting 4 hours:
+
+```
+EventPayout = 600 × 0.30 × 0.70 × (4/10) = Rs. 50.40
+```
 
 ### Weekly Payout Cap
 
 ```
-WeeklyPayoutCap = CoverageRatio × DailyIncome × 5
+WeeklyPayoutCap = MIN(2 × EventPayout per week, DailyIncome × CoverageRatio)
 ```
 
-Caps at 5 insured working days regardless of the 7-day policy week. This is
-the insurer's maximum exposure per policy per week.
+The cap is whichever is lower: two payout events in a single week, or the
+worker's full single-day insured amount (`DailyIncome × CoverageRatio`). A
+worker cannot receive more than two disruption payouts in one policy week,
+and the total cannot exceed one full day's insured income regardless.
 
-| Tier | Max Weekly Payout |
-|---|---|
-| Rs. 400/day | Rs. 1,600 |
-| Rs. 600/day | Rs. 2,400 |
-| Rs. 800/day | Rs. 3,200 |
+| Tier | Single-day insured amount | Effective weekly cap |
+|---|---|---|
+| Rs. 400/day | Rs. 120 | Rs. 120 |
+| Rs. 600/day | Rs. 180 | Rs. 180 |
+| Rs. 800/day | Rs. 240 | Rs. 240 |
 
 ---
 
@@ -568,39 +579,56 @@ correct model for a system with no fraud history.
 
 ### The Central Insight
 
-> GigShield does not check GPS coordinates at claim time. Not at any step
-> of the payout process. This is not a gap. It is proof that the architecture
+> **GigShield does not check GPS coordinates at claim time. Not at any step
+> of the payout process.**
+>
+> This is not a gap in the architecture. It is proof that the architecture
 > is correct.
 
-Payout eligibility in GigShield is a database record set at enrollment — not a
-runtime location check. When a disruption fires in Zone X, the system queries:
-which workers have an active policy with `home_store_id = Zone X`? Every
-matching worker receives a payout. The GPS question is structurally irrelevant.
+Payout eligibility in GigShield is a database record set at enrollment. When
+a disruption fires in Zone X, the system queries: which workers have an active
+policy with `home_store_id = Zone X`? Every matching worker receives a payout.
+The answer is already in the database before the event fires. GPS at claim time
+adds nothing.
 
-A GPS spoofing attack manipulates coordinates reported at the moment a system
-checks location. GigShield never checks location at that moment.
+A GPS spoofing attack manipulates coordinates at the moment a system checks
+location. GigShield never performs that check. A fraudster spoofing GPS during
+a disruption in their own zone receives the payout they would have received
+anyway. A fraudster spoofing GPS to appear in a different zone still fails —
+the system routes payouts by `home_store_id`, not by runtime coordinates. To
+defeat GigShield's payout system, a fraudster would need to change a database
+record — not a GPS coordinate. That requires defeating enrollment verification.
+There is nothing to spoof at claim time.
 
-- A fraudster spoofing GPS during a disruption event in their own zone
-  accomplishes nothing — they would have received the payout regardless.
-- A fraudster spoofing GPS to appear in a different zone also accomplishes
-  nothing — the system routes payouts by `home_store_id`, not runtime location.
+### Why GPS Is a Critical Problem for Food Delivery — and Why It Is Not for GigShield
 
-To defeat GigShield's payout system, a fraudster would need to change a
-database record. That requires defeating the enrollment verification layer.
-There is no GPS to spoof.
+This distinction explains the persona choice and the entire product architecture.
 
-### Why GPS Matters for Food Delivery But Not for GigShield
+**Food delivery (Zomato / Swiggy):** Drivers operate city-wide with no fixed
+zone assignment. A parametric insurance product on this model has no choice —
+it must check GPS coordinates at event time to determine which drivers were in
+the affected area. That is the only signal available. And it is manipulable in
+under three minutes on any Android device. Developer Options → Install mock
+location app → Inject coordinates. No technical knowledge required. The
+location API was designed for developer testing, not adversarial environments.
+Every app on the device receives the fabricated coordinates without any ability
+to distinguish them from real GPS data. The entire fraud defense of a GPS-
+dependent parametric product collapses at the Android software layer.
 
-Food delivery drivers (Zomato, Swiggy) operate city-wide with no fixed zone
-assignment. A parametric product on this model must check GPS at event time —
-it is the only way to know which drivers were in the affected area. That signal
-is manipulable in under three minutes on any Android device using a free mock
-location app. The entire fraud defense collapses at the software layer.
+**Quick-commerce (Zepto / Blinkit):** Every driver is permanently assigned to
+a specific dark store at enrollment. That assignment is verified against the
+Platform API once and stored immutably in the database. Zone membership is a
+known fact before any disruption event occurs. Runtime GPS adds nothing to
+this because the system already knows where the driver works. The structural
+choice to build for Q-commerce rather than food delivery is, at its core, a
+decision to eliminate an entire fraud attack surface by design.
 
-Quick-commerce workers are assigned to a specific dark store at enrollment.
-That assignment is verified against the Platform API once and stored. Runtime
-GPS adds nothing because zone membership is already known. The structural
-difference between these two models is the reason GigShield chose Q-commerce.
+The parametric principle states: the trigger must be independent of the
+policyholder's behavior. ICICI Lombard's crop insurance pays enrolled farmers
+when rainfall crosses a district threshold — it does not check whether each
+farmer was standing in their field. GigShield works the same way. Zone
+assignment is the enrollment fact. The trigger is the external event. GPS is
+irrelevant to both.
 
 ### Real Fraud Surface: Enrollment and Policy Management
 
@@ -616,69 +644,35 @@ policy-management problem.
 
 ### Hardware-Level Spoofing Defense (Extension — Not Core System)
 
-For platforms where runtime GPS verification is unavoidable — food delivery
-and e-commerce models — a hardware-level defense architecture is available
-that shifts verification from the manipulable software layer to physical signals
-that no application can reach.
+For food delivery and e-commerce platforms where runtime GPS verification is
+structurally unavoidable, a hardware-level defense can shift verification from
+the manipulable Android software layer to physical signals that no application
+can reach.
 
-**Signal 1 — GNSS Satellite Signal Strength**
+Three independent signals are cross-checked:
 
-Every Android device contains a GPS chipset that receives signals from GNSS
-satellites. Signal strength is measured as Carrier-to-Noise density (C/N0)
-in dB-Hz. This reading comes from the hardware modem — not the software
-location layer. A mock location app has no access to it.
+- **GNSS satellite signal strength (C/N0):** Read directly from the hardware
+  modem, not the software location layer. A mock location app cannot access or
+  alter it. Indoor hardware readings while GPS reports an outdoor road location
+  is a direct contradiction.
 
-| Physical Environment | C/N0 Range (dB-Hz) | Fraud Signal |
-|---|---|---|
-| Outdoors, clear | 35–50 | None |
-| Outdoors, heavy rain | 25–38 | None — consistent with rain per ITU-R P.838 |
-| Indoors | 0–20 | High if GPS claims outdoor road location |
-| Spoofed from indoors | 0–20 (hardware truth) | Critical — GPS and modem contradict |
+- **Cellular tower transitions:** Physical movement causes cell tower handoffs
+  readable via `TelephonyManager`. GPS reporting 25 km/h with zero tower
+  transitions is physically impossible for a genuine moving driver.
 
-**Signal 2 — Cellular Tower Transition Detection**
+- **WiFi BSSID fingerprinting:** The set of WiFi routers visible within 50
+  metres of a location is unique and fixed to physical geography. Stored at
+  enrollment from the dark store location. Zero BSSID overlap at claim time
+  means the driver is not physically at the dark store regardless of what GPS
+  reports.
 
-Physical movement causes a device to cross tower boundaries and hand off to
-new cell towers — readable via Android's `TelephonyManager` API. A fraudster
-scripting GPS movement at home shows zero tower transitions while GPS reports
-active travel. Zero tower transitions at GPS velocity above 15 km/h is
-physically impossible for a genuine mobile driver. Reference database:
-OpenCelliD India (MCC 404/405, approximately 8 million towers, free).
+A composite fraud score from these three signals — plus server ping velocity
+checks and behavioural pattern flags — drives the adjudication decision:
+auto-approve below 25, soft flag and split payout at 26–55, full hold and
+manual review at 56–75, auto-reject above 75.
 
-**Signal 3 — WiFi BSSID Geographic Fingerprinting**
-
-Every WiFi router broadcasts a unique hardware identifier (BSSID) that is
-fixed to the router. Any device can passively scan visible BSSIDs within
-approximately 50 metres. At enrollment, the app records the BSSID set visible
-from the worker's assigned dark store. A driver claiming to be at their dark
-store while at home shows zero BSSID overlap with the stored fingerprint.
-GPS coordinates can be fabricated. The set of physical routers visible from
-a location cannot be. Reference: WiGLE API for Indian cities (free tier).
-
-**Composite Fraud Score**
-
-| Signal | Weight | Primary Fraud Pattern |
-|---|---|---|
-| GNSS SNR Profile | 25% | Indoor spoofing during claimed outdoor session |
-| Cell Tower Transitions | 25% | Scripted GPS movement |
-| WiFi BSSID Match Rate | 20% | Dark store anchor spoofing |
-| Server Ping Coverage + Velocity | 15% | Retroactive log injection |
-| Behavioural Patterns | 15% | Adverse selection, collusion rings |
-
-**Adjudication Tiers**
-
-| Score | Decision | Action |
-|---|---|---|
-| 0–25 | Auto-approve | Full payout within 15 minutes |
-| 26–55 | Soft flag | 50% immediate, 50% held 24 hours |
-| 56–75 | Manual review | Full hold, human adjudicator within 24 hours |
-| 76–100 | Auto-reject | No payout, appeal option, account flagged |
-
-**Community Validation**
-
-If the majority of workers in a zone show similar anomalous readings during
-the same event, the system classifies this as a shared environmental condition
-and releases held payouts automatically. Individual anomaly resembles fraud.
-Collective anomaly resembles weather. The system distinguishes between them.
+This layer is designed for future platform expansion. It is not required for
+the Q-commerce model.
 
 ### UX Principle
 
@@ -740,6 +734,23 @@ returns. A web app cannot do this reliably.
 | Infrastructure | Docker + Docker Compose | Single-command environment setup; all services (backend, frontend, PostgreSQL, Redis) run as a composed stack with no host-level dependencies |
 
 ### System Architecture
+
+The diagram above shows the full production architecture. Key flows:
+
+- The React Native mobile app communicates with FastAPI routers over HTTP/REST
+- FastAPI routes to a Services layer (worker, policy, zone, audit) which calls
+  the Engine layer for pure insurance logic — no database calls occur in the
+  engine itself
+- The Engine layer contains ZDI Scorer, Disruption Manager, Claims Engine,
+  Fraud Checker, Premium Calculator, and Payout Service
+- Adapters sit below the engine behind abstract interfaces
+  (`SignalProvider ABC`, `PaymentGateway ABC`) — mock implementations point to
+  OWM, TomTom, CPCB, and Razorpay; swapping to live APIs requires no engine
+  changes
+- APScheduler runs the full pipeline every 15 minutes, reading from adapters
+  and writing results to PostgreSQL and Redis
+- PostgreSQL 15 (9 tables, audit log, TimescaleDB-ready) handles all persistent
+  state; Redis 7 handles outage flags and pub/sub
 
 ```
 Mobile App (React Native) / Web Dashboard (Next.js)
