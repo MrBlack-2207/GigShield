@@ -1,0 +1,51 @@
+# ── Environment — NEVER commit this ─────────────────────────────
+.env
+
+# ── Python ───────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ── Virtual environments ─────────────────────────────────────────
+venv/
+.venv/
+env/
+
+# ── Docker ───────────────────────────────────────────────────────
+# Keep docker-compose.yml — push that
+# But ignore any local override files
+docker-compose.override.yml
+
+# ── Database ─────────────────────────────────────────────────────
+*.sqlite3
+postgres_data/
+
+# ── Alembic ──────────────────────────────────────────────────────
+# Push migration files — they are source of truth for schema
+# Do NOT ignore alembic/versions/
+
+# ── Node / Expo (frontend — empty for now) ───────────────────────
+frontend/node_modules/
+frontend/.expo/
+frontend/dist/
+frontend/.next/
+
+# ── OS files ─────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── IDE ──────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
