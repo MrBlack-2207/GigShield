@@ -322,7 +322,7 @@ WeeklyPremium =
 | Parameter | Definition | Value | Source |
 |---|---|---|---|
 | `DailyIncome` | Worker's declared income tier | Rs. 400 / 600 / 800 | Declared at onboarding, verified against UPI history |
-| `CoverageRatio` | Fraction of declared income that is insured | 0.80 | Fixed platform parameter |
+| `CoverageRatio` | Fraction of declared income that is insured | 0.30 | Fixed platform parameter |
 | `SeasonalDisruptionDays` | Expected disruption days per week for this zone and season | Dry: 1.0 · Pre-monsoon: 1.6 · Monsoon: 2.5 · Post: 1.3 | ML model output (see Section 4) |
 | `ConditionalPayoutRate` | E[payout% given ZDI >= 25] — severity only, not frequency | 0.50 baseline | ML model output (see Section 4) |
 | `AvgHoursFraction` | E[disruption hours / working hours given disruption] | 0.40 baseline (4hrs of 10hr day) | ML model output (see Section 4) |
