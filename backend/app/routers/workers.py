@@ -20,11 +20,13 @@ def register(body: WorkerRegisterRequest, db: Session = Depends(get_db)):
             income_tier=body.income_tier,
             zone_id=body.zone_id,
             platform=body.platform,
+            home_store_id=body.home_store_id,
+            external_worker_id=body.external_worker_id,
             aadhaar=body.aadhaar,
         )
         return worker
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
 
 
 @router.get("/{worker_id}", response_model=WorkerOut)

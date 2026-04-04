@@ -12,6 +12,26 @@ from app.services.worker_service import (
 from app.services.policy_service import (
     create_policy, get_active_policy,
     get_policy_by_id, get_worker_claims,
+    derive_effective_policy_status, is_policy_payout_eligible,
+    sync_policy_status_in_flow,
+)
+from app.services.zdi_log_service import (
+    get_affected_hours, get_daily_affected_hours,
+)
+from app.services.wallet_service import (
+    apply_wallet_entry,
+    cash_out_wallet,
+    get_or_create_wallet,
+    get_wallet_for_worker,
+    list_withdrawal_requests,
+    list_wallet_transactions,
+)
+from app.services.disruption_frequency_inference import (
+    DisruptionFrequencyInferenceResult,
+    predict_disruption_frequency_days,
+)
+from app.services.disruption_severity_inference import (
+    predict_disruption_severity,
 )
 
 __all__ = [
@@ -22,4 +42,11 @@ __all__ = [
     "register_worker", "get_worker_by_id", "get_worker_by_phone",
     "create_policy", "get_active_policy",
     "get_policy_by_id", "get_worker_claims",
+    "derive_effective_policy_status", "is_policy_payout_eligible",
+    "sync_policy_status_in_flow",
+    "get_affected_hours", "get_daily_affected_hours",
+    "apply_wallet_entry", "cash_out_wallet", "get_or_create_wallet",
+    "get_wallet_for_worker", "list_wallet_transactions", "list_withdrawal_requests",
+    "DisruptionFrequencyInferenceResult", "predict_disruption_frequency_days",
+    "predict_disruption_severity",
 ]

@@ -5,6 +5,7 @@ import sys
 sys.path.insert(0, "/app")
 
 from app.database import SessionLocal
+from app.models.dark_store import DarkStore
 from app.models.worker import Worker
 from app.models.policy import Policy
 from app.engine.premium_calculator import calculate_premium, get_current_season
@@ -13,21 +14,21 @@ from datetime import date, datetime, timezone, timedelta
 WORKERS = [
     # High earners — ₹800/day
     {"full_name": "Ravi Kumar",    "phone": "9880001001", "income_tier": 800,
-     "zone_id": "BLR-01", "platform": "ZEPTO"},
+     "zone_id": "BLR-01", "platform": "zepto"},
     {"full_name": "Suresh Babu",   "phone": "9880001002", "income_tier": 800,
-     "zone_id": "BLR-03", "platform": "BLINKIT"},
+     "zone_id": "BLR-03", "platform": "blinkit"},
 
     # Mid earners — ₹600/day
     {"full_name": "Anitha Raj",    "phone": "9880001003", "income_tier": 600,
-     "zone_id": "BLR-02", "platform": "ZEPTO"},
+     "zone_id": "BLR-02", "platform": "zepto"},
     {"full_name": "Mohammed Arif", "phone": "9880001004", "income_tier": 600,
-     "zone_id": "BLR-06", "platform": "BLINKIT"},
+     "zone_id": "BLR-06", "platform": "blinkit"},
 
     # Entry earners — ₹400/day
     {"full_name": "Kavya Nair",    "phone": "9880001005", "income_tier": 400,
-     "zone_id": "BLR-04", "platform": "ZEPTO"},
+     "zone_id": "BLR-04", "platform": "zepto"},
     {"full_name": "Deepak Singh",  "phone": "9880001006", "income_tier": 400,
-     "zone_id": "BLR-05", "platform": "BOTH"},
+     "zone_id": "BLR-05", "platform": "zepto"},
 ]
 
 db = SessionLocal()
@@ -39,12 +40,25 @@ for w in WORKERS:
         print(f"  SKIP  {w['full_name']} (already exists)")
         continue
 
+    store = (
+        db.query(DarkStore)
+        .filter(
+            DarkStore.zone_id == w["zone_id"],
+            DarkStore.platform == w["platform"],
+        )
+        .first()
+    )
+    if not store:
+        print(f"  SKIP  {w['full_name']} (no dark store for {w['zone_id']} / {w['platform']})")
+        continue
+
     worker = Worker(
         full_name=w["full_name"],
         phone=w["phone"],
         income_tier=w["income_tier"],
         primary_zone_id=w["zone_id"],
         platform=w["platform"],
+        home_store_id=store.id,
         kyc_status="VERIFIED",
         is_active=True,
     )

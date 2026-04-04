@@ -40,7 +40,12 @@ def preview_premium(body: PremiumPreviewRequest):
 @router.post("/", response_model=PolicyOut, status_code=201)
 def purchase_policy(body: PolicyCreateRequest, db: Session = Depends(get_db)):
     try:
-        policy = create_policy(db, body.worker_id, body.zone_id)
+        policy = create_policy(
+            db=db,
+            worker_id=body.worker_id,
+            zone_id=body.zone_id,
+            tenure_months=body.tenure_months,
+        )
         return policy
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

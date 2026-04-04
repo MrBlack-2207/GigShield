@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ds_correlation_load_city_week_row",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "city",
+    "iso_year",
+    "iso_week",
+    "season_index",
+    "active_policies_count",
+    "insured_base_sum",
+    "simultaneous_disruption_ratio",
+    "rain_zone_correlation",
+    "outage_breadth_ratio",
+    "event_flag_multi_zone_ratio",
+    "zdi_cross_zone_std",
+    "claims_per_hour_peak",
+    "zones_with_claims_count",
+    "realized_weekly_loss",
+    "independent_weekly_loss_baseline",
+    "correlation_load"
+  ],
+  "properties": {
+    "city": {"type": "string"},
+    "iso_year": {"type": "integer", "minimum": 2000},
+    "iso_week": {"type": "integer", "minimum": 1, "maximum": 53},
+    "season_index": {"type": "integer", "minimum": 1, "maximum": 4},
+    "active_policies_count": {"type": "integer", "minimum": 0},
+    "insured_base_sum": {"type": "number", "minimum": 0},
+    "simultaneous_disruption_ratio": {"type": "number", "minimum": 0, "maximum": 1},
+    "rain_zone_correlation": {"type": "number", "minimum": -1, "maximum": 1},
+    "outage_breadth_ratio": {"type": "number", "minimum": 0, "maximum": 1},
+    "event_flag_multi_zone_ratio": {"type": "number", "minimum": 0, "maximum": 1},
+    "zdi_cross_zone_std": {"type": "number", "minimum": 0},
+    "claims_per_hour_peak": {"type": "number", "minimum": 0},
+    "zones_with_claims_count": {"type": "integer", "minimum": 0},
+    "realized_weekly_loss": {"type": "number", "minimum": 0},
+    "independent_weekly_loss_baseline": {"type": "number", "exclusiveMinimum": 0},
+    "correlation_load": {"type": "number", "minimum": 0}
+  }
+}

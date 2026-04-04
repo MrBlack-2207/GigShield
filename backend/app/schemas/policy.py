@@ -2,12 +2,13 @@
 
 from pydantic import BaseModel
 from datetime import date, datetime
-from typing import Optional
+from typing import Literal, Optional
 
 
 class PolicyCreateRequest(BaseModel):
     worker_id: str
     zone_id:   str
+    tenure_months: Literal[1, 3, 6, 12]
 
 
 class PolicyOut(BaseModel):
@@ -19,6 +20,13 @@ class PolicyOut(BaseModel):
     coverage_ratio:     float
     weekly_payout_cap:  float
     season_at_purchase: str
+    tenure_months:      int
+    start_date:         datetime
+    end_date:           datetime
+    billing_cycle:      str
+    last_premium_paid_at: datetime
+    next_premium_due_at: datetime
+    cooldown_ends_at:   datetime
     week_start:         date
     week_end:           date
     status:             str

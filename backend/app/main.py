@@ -32,13 +32,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-from app.routers import workers, policies, zones, claims, admin
+from app.routers import workers, policies, zones, claims, admin, wallet, contract
 
 app.include_router(workers.router,  prefix="/api/workers",  tags=["Workers"])
 app.include_router(policies.router, prefix="/api/policies", tags=["Policies"])
 app.include_router(zones.router,    prefix="/api/zones",    tags=["Zones"])
 app.include_router(claims.router,   prefix="/api/claims",   tags=["Claims"])
 app.include_router(admin.router,    prefix="/api/admin",    tags=["Admin"])
+app.include_router(wallet.router,   prefix="/api/wallet",   tags=["Wallet"])
+app.include_router(contract.router, prefix="/api/contract", tags=["DemoContract"])
 
 
 @app.get("/health", tags=["Health"])

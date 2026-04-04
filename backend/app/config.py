@@ -24,17 +24,29 @@ class Settings(BaseSettings):
 
     # Insurance constants (match our locked design doc)
     WORKING_HOURS_PER_DAY: float = 10.0
-    COVERAGE_RATIO: float = 0.80
+    COVERAGE_RATIO: float = 0.30
     CORRELATION_LOAD: float = 1.18
     LOADING_FACTOR: float = 1.25
     ADMIN_FEE_INR: float = 5.00
     SCHEDULER_INTERVAL_MINUTES: int = 15
+    DISRUPTION_FREQ_MODEL_PATH: str = "models/disruption_frequency_model.pkl"
+    DISRUPTION_FREQ_CLIP_MIN: float = 0.0
+    DISRUPTION_FREQ_CLIP_MAX: float = 4.0
+    DISRUPTION_FREQ_LOOKBACK_DAYS: int = 28
+    DISRUPTION_FREQ_MIN_POINTS: int = 8
 
     # Mock flags
     USE_MOCK_WEATHER: bool = True
     USE_MOCK_TRAFFIC: bool = True
     USE_MOCK_AQI: bool = True
     USE_MOCK_PAYMENT: bool = True
+
+    # Event-flag severity weights (stored for transparency; not used in ZDI yet)
+    EVENT_WEIGHT_STRIKE: float = 0.80
+    EVENT_WEIGHT_BANDH: float = 0.85
+    EVENT_WEIGHT_PETROL_CRISIS: float = 0.70
+    EVENT_WEIGHT_LOCKDOWN: float = 1.00
+    EVENT_WEIGHT_CURFEW: float = 0.90
 
     @property
     def cors_origins_list(self) -> list[str]:

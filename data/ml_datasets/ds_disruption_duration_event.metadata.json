@@ -1,0 +1,9 @@
+{
+  "dataset_name": "ds_disruption_duration_event",
+  "years_simulated": 5,
+  "row_count": 3000,
+  "zone_count": 6,
+  "seed_used": 42,
+  "generated_at_utc": "2026-04-04T14:15:54.155846+00:00",
+  "csv_file": "/data/ml_datasets/ds_disruption_duration_event.csv"
+}

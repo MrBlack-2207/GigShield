@@ -22,8 +22,10 @@ class Zone(Base):
     is_active   = Column(Boolean, default=True)
 
     # Relationships
+    dark_stores       = relationship("DarkStore", back_populates="zone")
     workers           = relationship("Worker", back_populates="zone")
     policies          = relationship("Policy", back_populates="zone")
     signal_readings   = relationship("SignalReading", back_populates="zone")
+    zdi_logs          = relationship("ZoneZDILog", back_populates="zone")
     disruption_events = relationship("DisruptionEvent", back_populates="zone")
     zdi_snapshots     = relationship("ZDISnapshot", back_populates="zone")

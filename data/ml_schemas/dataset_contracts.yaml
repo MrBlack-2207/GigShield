@@ -1,0 +1,258 @@
+version: "1.0"
+created_on: "2026-04-04"
+scope: "ml_use_cases_1_to_6"
+
+global_rules:
+  - "Identifier fields are index columns only, never model features."
+  - "No synthetic rows are generated from this artifact."
+  - "No model training is performed from this artifact."
+  - "No backend integration changes are implied by this artifact."
+  - "All timestamps are UTC."
+
+datasets:
+  - dataset_name: "ds_disruption_frequency_zone_month"
+    ml_use_case: "1_disruption_frequency_estimation"
+    objective: "Estimate seasonal disruption days (expected disruption days per week) from environmental and historical signal context."
+    prediction_type: "regression"
+    recommended_model: "gradient_boosted_trees"
+    row_granularity: "one_row_per_zone_per_year_month"
+    minimum_recommended_rows: 5000
+    index_columns:
+      - zone_id
+      - year
+      - month_of_year
+    target:
+      name: "seasonal_disruption_days"
+      type: "float"
+      derivation: "Distinct disruption days in current month divided by weeks in month; disruption day = any interval with zdi_value >= 25."
+    model_input_features:
+      - {name: month_of_year, type: int}
+      - {name: season_index, type: int}
+      - {name: risk_tier_index, type: int}
+      - {name: radius_km, type: float}
+      - {name: recent_4week_disruption_days, type: float}
+      - {name: prev_4week_zdi_mean, type: float}
+      - {name: prev_4week_zdi_p95, type: float}
+      - {name: prev_4week_rain_norm_mean, type: float}
+      - {name: prev_4week_rain_norm_p95, type: float}
+      - {name: prev_4week_outage_active_ratio, type: float}
+      - {name: prev_4week_traffic_norm_mean, type: float}
+      - {name: prev_4week_aqi_norm_mean, type: float}
+      - {name: prev_4week_event_flag_active_ratio, type: float}
+    excluded_from_model_features_per_user_feedback:
+      - zone_id
+      - active_workers_count
+      - active_policies_count
+      - season_string
+    source_tables:
+      - zones
+      - signal_readings
+      - zone_zdi_logs
+
+  - dataset_name: "ds_disruption_severity_event"
+    ml_use_case: "2_disruption_severity_estimation"
+    objective: "Estimate event severity as conditional payout rate and optional payout tier."
+    prediction_type: "regression_with_optional_classification"
+    recommended_model: "gradient_boosted_trees"
+    row_granularity: "one_row_per_disruption_event"
+    minimum_recommended_rows: 15000
+    index_columns:
+      - event_id
+      - zone_id
+    target:
+      name: "conditional_payout_rate"
+      type: "float"
+      derivation: "Median over event claims of final_payout_inr / (income_tier * coverage_ratio * (affected_hours/working_hours)), clipped to [0,1]."
+    optional_targets:
+      - name: "payout_tier_class"
+        type: "int"
+        values: [0, 1, 2]
+        mapping: "0->0.40, 1->0.70, 2->1.00"
+    model_input_features:
+      - {name: season_index, type: int}
+      - {name: start_hour, type: int}
+      - {name: day_of_week, type: int}
+      - {name: max_rain_norm, type: float}
+      - {name: max_outage_norm, type: float}
+      - {name: max_traffic_norm, type: float}
+      - {name: max_aqi_norm, type: float}
+      - {name: mean_rain_norm, type: float}
+      - {name: mean_traffic_norm, type: float}
+      - {name: event_flags_active_count, type: int}
+      - {name: max_zdi, type: float}
+      - {name: mean_zdi, type: float}
+      - {name: zdi_above_50_ratio, type: float}
+      - {name: zdi_above_75_ratio, type: float}
+    removed_from_features_per_user_feedback:
+      - policies_exposed_count
+      - avg_income_tier_exposed
+    source_tables:
+      - disruption_events
+      - signal_readings
+      - zone_zdi_logs
+      - claims
+
+  - dataset_name: "ds_disruption_duration_event"
+    ml_use_case: "3_disruption_duration_estimation"
+    objective: "Estimate event duration as affected_hours and avg_hours_fraction."
+    prediction_type: "regression"
+    recommended_model: "gradient_boosted_trees_or_gamma_regression"
+    row_granularity: "one_row_per_disruption_event"
+    minimum_recommended_rows: 15000
+    index_columns:
+      - event_id
+      - zone_id
+    target:
+      name: "affected_hours"
+      type: "float"
+      derivation: "Disruption event duration in hours from disruption_events.affected_hours."
+    derived_target:
+      name: "avg_hours_fraction"
+      type: "float"
+      derivation: "affected_hours / 10.0"
+    model_input_features:
+      - {name: season_index, type: int}
+      - {name: start_hour, type: int}
+      - {name: day_of_week, type: int}
+      - {name: early_rain_mean, type: float}
+      - {name: early_outage_ratio, type: float}
+      - {name: early_traffic_mean, type: float}
+      - {name: early_aqi_mean, type: float}
+      - {name: peak_zdi_first_hour, type: float}
+      - {name: zdi_rise_rate_first_hour, type: float}
+      - {name: event_flags_active_count_first_hour, type: int}
+    source_tables:
+      - disruption_events
+      - signal_readings
+      - zone_zdi_logs
+
+  - dataset_name: "ds_correlation_load_city_week"
+    ml_use_case: "4_correlation_load_estimation"
+    objective: "Estimate systemic correlation surcharge (correlation_load) for pricing."
+    prediction_type: "regression"
+    recommended_model: "elastic_net_plus_gradient_boosted_trees"
+    row_granularity: "one_row_per_city_iso_week"
+    minimum_recommended_rows: 3000
+    index_columns:
+      - city
+      - iso_year
+      - iso_week
+    target:
+      name: "correlation_load"
+      type: "float"
+      derivation: "realized_weekly_loss / independent_weekly_loss_baseline"
+    target_components_not_model_features:
+      - realized_weekly_loss
+      - independent_weekly_loss_baseline
+    model_input_features:
+      - {name: season_index, type: int}
+      - {name: active_policies_count, type: int}
+      - {name: insured_base_sum, type: float}
+      - {name: simultaneous_disruption_ratio, type: float}
+      - {name: rain_zone_correlation, type: float}
+      - {name: outage_breadth_ratio, type: float}
+      - {name: event_flag_multi_zone_ratio, type: float}
+      - {name: zdi_cross_zone_std, type: float}
+      - {name: claims_per_hour_peak, type: float}
+      - {name: zones_with_claims_count, type: int}
+    source_tables:
+      - zones
+      - policies
+      - zone_zdi_logs
+      - signal_readings
+      - claims
+      - payouts
+
+  - dataset_name: "ds_zdi_trigger_quality_interval"
+    ml_use_case: "5_zdi_learning_trigger_quality"
+    objective: "Classify whether a 15-minute interval represents true disruption."
+    prediction_type: "binary_classification"
+    recommended_model: "calibrated_gradient_boosted_classifier"
+    row_granularity: "one_row_per_zone_per_15min_interval"
+    minimum_recommended_rows: 300000
+    index_columns:
+      - zone_id
+      - ts_15m
+    target:
+      name: "true_disruption"
+      type: "int"
+      values: [0, 1]
+      derivation: "Synthetic latent disruption truth label or validated proxy label."
+    optional_targets:
+      - name: "operational_impact_proxy"
+        type: "int"
+        values: [0, 1]
+    model_input_features:
+      - {name: season_index, type: int}
+      - {name: hour, type: int}
+      - {name: day_of_week, type: int}
+      - {name: rain_norm, type: float}
+      - {name: outage_norm, type: float}
+      - {name: traffic_norm, type: float}
+      - {name: aqi_norm, type: float}
+      - {name: strike, type: int}
+      - {name: bandh, type: int}
+      - {name: petrol_crisis, type: int}
+      - {name: lockdown, type: int}
+      - {name: curfew, type: int}
+      - {name: zdi_lag_1, type: float}
+      - {name: zdi_lag_2, type: float}
+      - {name: rain_lag_1, type: float}
+      - {name: outage_lag_1, type: float}
+      - {name: risk_tier_index, type: int}
+      - {name: radius_km, type: float}
+    source_tables:
+      - zones
+      - signal_readings
+      - zone_zdi_logs
+      - disruption_events
+      - claims
+
+  - dataset_name: "ds_fraud_worker_week"
+    ml_use_case: "6_fraud_anomaly_detection"
+    objective: "Flag abnormal weekly worker claim and wallet behavior."
+    prediction_type: "anomaly_detection"
+    recommended_model: "isolation_forest"
+    row_granularity: "one_row_per_worker_per_week"
+    minimum_recommended_rows: 100000
+    index_columns:
+      - worker_id
+      - week_start
+    target:
+      name: "anomaly_score"
+      type: "float"
+      derivation: "Model output score (unsupervised)."
+    optional_targets:
+      - name: "weak_fraud_label"
+        type: "int"
+        values: [0, 1]
+        derivation: "Derived from existing fraud flags / manual review outcomes."
+    model_input_features:
+      - {name: platform_index, type: int}
+      - {name: income_tier, type: int}
+      - {name: kyc_status_index, type: int}
+      - {name: external_worker_id_present, type: int}
+      - {name: policy_status_index, type: int}
+      - {name: policy_age_days, type: float}
+      - {name: cooldown_remaining_hours, type: float}
+      - {name: claims_count_7d, type: int}
+      - {name: paid_claim_ratio_30d, type: float}
+      - {name: mean_claim_amount_30d, type: float}
+      - {name: max_claim_amount_30d, type: float}
+      - {name: zone_entropy_30d, type: float}
+      - {name: hours_between_claims_p50, type: float}
+      - {name: wallet_credits_7d, type: float}
+      - {name: wallet_debits_7d, type: float}
+      - {name: cashout_count_7d, type: int}
+      - {name: cashout_to_payout_time_p50_minutes, type: float}
+      - {name: withdrawal_reject_ratio, type: float}
+      - {name: manual_review_count_30d, type: int}
+    source_tables:
+      - workers
+      - policies
+      - claims
+      - payouts
+      - wallets
+      - wallet_ledger_entries
+      - withdrawal_requests
+      - audit_log

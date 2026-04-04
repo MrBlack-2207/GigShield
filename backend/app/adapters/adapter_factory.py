@@ -44,6 +44,12 @@ def get_outage_adapter() -> SignalProvider:
     return OutageToggleAdapter()
 
 
+def get_event_flag_adapters() -> list[SignalProvider]:
+    from app.adapters.mock_event_flags import get_event_flag_adapters as build_event_flag_adapters
+
+    return build_event_flag_adapters()
+
+
 def get_payment_gateway() -> PaymentGateway:
     if settings.USE_MOCK_PAYMENT:
         from app.adapters.mock_payment import MockPaymentGateway

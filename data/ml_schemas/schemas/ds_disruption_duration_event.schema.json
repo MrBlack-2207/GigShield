@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ds_disruption_duration_event_row",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "event_id",
+    "zone_id",
+    "season_index",
+    "start_hour",
+    "day_of_week",
+    "early_rain_mean",
+    "early_outage_ratio",
+    "early_traffic_mean",
+    "early_aqi_mean",
+    "peak_zdi_first_hour",
+    "zdi_rise_rate_first_hour",
+    "event_flags_active_count_first_hour",
+    "affected_hours"
+  ],
+  "properties": {
+    "event_id": {"type": "string"},
+    "zone_id": {"type": "string"},
+    "season_index": {"type": "integer", "minimum": 1, "maximum": 4},
+    "start_hour": {"type": "integer", "minimum": 0, "maximum": 23},
+    "day_of_week": {"type": "integer", "minimum": 0, "maximum": 6},
+    "early_rain_mean": {"type": "number", "minimum": 0, "maximum": 100},
+    "early_outage_ratio": {"type": "number", "minimum": 0, "maximum": 1},
+    "early_traffic_mean": {"type": "number", "minimum": 0, "maximum": 100},
+    "early_aqi_mean": {"type": "number", "minimum": 0, "maximum": 100},
+    "peak_zdi_first_hour": {"type": "number", "minimum": 0, "maximum": 100},
+    "zdi_rise_rate_first_hour": {"type": "number"},
+    "event_flags_active_count_first_hour": {"type": "integer", "minimum": 0},
+    "affected_hours": {"type": "number", "minimum": 0},
+    "avg_hours_fraction": {"type": "number", "minimum": 0}
+  }
+}

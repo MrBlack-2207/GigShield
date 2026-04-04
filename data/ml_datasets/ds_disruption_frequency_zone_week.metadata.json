@@ -1,0 +1,13 @@
+{
+  "dataset_name": "ds_disruption_frequency_zone_week",
+  "seed": 42,
+  "years_simulated": 5,
+  "start_year": 2022,
+  "end_year": 2026,
+  "zone_count": 6,
+  "row_count": 1566,
+  "generated_at_utc": "2026-04-04T13:27:38.255964+00:00",
+  "active_only_requested": false,
+  "active_filter_applied": false,
+  "csv_file": "/app/data/ml_datasets/ds_disruption_frequency_zone_week.csv"
+}

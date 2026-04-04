@@ -29,6 +29,7 @@ class PremiumBreakdown:
     season:                   str
     coverage_ratio:           float
     seasonal_disruption_days: float
+    disruption_days_source:   str
     conditional_payout_rate:  float
     avg_hours_fraction:       float
     correlation_load:         float
@@ -37,10 +38,15 @@ class PremiumBreakdown:
 
     expected_weekly_loss:     float   # pre-loading actuarial expected loss
     weekly_premium_inr:       float   # final premium charged
-    weekly_payout_cap_inr:    float   # max payout in any single week
+    weekly_payout_cap_inr:    float   # max payout in any single policy week
 
 
-def calculate_premium(income_tier: int, season: str) -> PremiumBreakdown:
+def calculate_premium(
+    income_tier: int,
+    season: str,
+    seasonal_disruption_days_override: float | None = None,
+    disruption_days_source: str | None = None,
+) -> PremiumBreakdown:
     """
     Corrected premium formula — separates frequency from severity.
 
@@ -54,8 +60,7 @@ def calculate_premium(income_tier: int, season: str) -> PremiumBreakdown:
         × LoadingFactor                     ← insurer margin
         + AdminFee
 
-    Weekly payout cap = CoverageRatio × DailyIncome × 5
-    (caps at 5 insured working days per week)
+    Weekly payout cap = CoverageRatio × DailyIncome
     """
     if income_tier not in INCOME_TIERS:
         raise ValueError(f"Income tier must be one of {INCOME_TIERS}. Got: {income_tier}")
@@ -67,6 +72,14 @@ def calculate_premium(income_tier: int, season: str) -> PremiumBreakdown:
         )
 
     disruption_days = SEASONAL_DISRUPTION_DAYS[season_key]
+    source = "fallback_static"
+    if seasonal_disruption_days_override is not None:
+        disruption_days = float(seasonal_disruption_days_override)
+        disruption_days = max(
+            settings.DISRUPTION_FREQ_CLIP_MIN,
+            min(settings.DISRUPTION_FREQ_CLIP_MAX, disruption_days),
+        )
+        source = disruption_days_source or "ml_prediction"
 
     coverage_ratio    = settings.COVERAGE_RATIO
     correlation_load  = settings.CORRELATION_LOAD
@@ -87,13 +100,14 @@ def calculate_premium(income_tier: int, season: str) -> PremiumBreakdown:
         * loading_factor
     ) + admin_fee
 
-    weekly_payout_cap = coverage_ratio * income_tier * 5
+    weekly_payout_cap = coverage_ratio * income_tier
 
     return PremiumBreakdown(
         income_tier=income_tier,
         season=season_key,
         coverage_ratio=coverage_ratio,
         seasonal_disruption_days=disruption_days,
+        disruption_days_source=source,
         conditional_payout_rate=CONDITIONAL_PAYOUT_RATE,
         avg_hours_fraction=AVG_HOURS_FRACTION,
         correlation_load=correlation_load,

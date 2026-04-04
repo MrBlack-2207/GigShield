@@ -1,15 +1,19 @@
 # gigshield/backend/app/schemas/worker.py
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_validator, model_validator
 from typing import Optional
+
+from app.constants.platforms import PLATFORMS, normalize_platform
 
 
 class WorkerRegisterRequest(BaseModel):
     full_name:   str
     phone:       str
     income_tier: int
-    zone_id:     str
+    zone_id:     Optional[str] = None
+    home_store_id: Optional[str] = None
     platform:    str
+    external_worker_id: Optional[str] = None
     aadhaar:     Optional[str] = None
 
     @field_validator("income_tier")
@@ -22,9 +26,17 @@ class WorkerRegisterRequest(BaseModel):
     @field_validator("platform")
     @classmethod
     def platform_must_be_valid(cls, v):
-        if v not in ["ZEPTO", "BLINKIT", "BOTH"]:
-            raise ValueError("platform must be ZEPTO, BLINKIT, or BOTH")
-        return v
+        normalized = normalize_platform(v)
+        if not normalized:
+            allowed = ", ".join(PLATFORMS)
+            raise ValueError(f"platform must be one of: {allowed}")
+        return normalized
+
+    @model_validator(mode="after")
+    def zone_or_store_required(self):
+        if not self.zone_id and not self.home_store_id:
+            raise ValueError("Either zone_id or home_store_id is required")
+        return self
 
 
 class WorkerOut(BaseModel):
@@ -34,6 +46,8 @@ class WorkerOut(BaseModel):
     income_tier:     int
     primary_zone_id: str
     platform:        str
+    external_worker_id: Optional[str]
+    home_store_id:   str
     kyc_status:      str
     is_active:       bool
 
